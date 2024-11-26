@@ -15,6 +15,7 @@ extern "C" {
 
 %token <string_val> WORD
 %token NOTOKEN OVERWRITE APPEND LESS PIPE AMPERSAND NEWLINE
+%token APPEND_ERR
 
 %%
 
@@ -73,6 +74,12 @@ iomodifier_opt:
     | iomodifier_opt APPEND WORD {
         printf("   Yacc: output redirection (append) to \"%s\"\n", $3);
         Command::_currentCommand._outFile = $3;
+        Command::_currentCommand._append = 1;
+    }
+    | iomodifier_opt APPEND_ERR WORD {
+        printf("   Yacc: output and error redirection to \"%s\"\n", $3);
+        Command::_currentCommand._outFile = $3;
+        Command::_currentCommand._errFile = $3;
         Command::_currentCommand._append = 1;
     }
     | iomodifier_opt LESS WORD {

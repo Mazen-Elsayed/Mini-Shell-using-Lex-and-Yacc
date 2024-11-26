@@ -89,20 +89,23 @@ Command:: clear()
 
 	if ( _outFile ) {
 		free( _outFile );
+		_outFile = NULL;
 	}
 
 	if ( _inputFile ) {
 		free( _inputFile );
+		_inputFile = NULL;
 	}
 
 	if ( _errFile ) {
 		free( _errFile );
+		_errFile = NULL;
 	}
 
 	_numberOfSimpleCommands = 0;
-	_outFile = 0;
-	_inputFile = 0;
-	_errFile = 0;
+	_outFile = NULL;
+	_inputFile = NULL;
+	_errFile = NULL;
 	_background = 0;
 	_append = 0; 
 }
@@ -182,7 +185,7 @@ void Command::executeCommand(int i, int defaultIn, int defaultOut, int defaultEr
         //First command
         if (i == 0) {
             setupInputRedirection(defaultIn);
-        }
+        } 
         
         //Last command
         if (i == _numberOfSimpleCommands - 1) {
@@ -248,6 +251,25 @@ void Command::execute() {
     int defaultIn = dup(0);
     int defaultOut = dup(1);
     int defaultErr = dup(2);
+
+    // Handle error redirection first
+    if (_errFile) {
+        FILE *errorFile = fopen(_errFile, "a");
+        if (errorFile) {
+            fprintf(errorFile, "syntax error\n");
+            fclose(errorFile);
+        }
+        
+        // If _errFile and _outFile point to the same file, set _outFile to NULL
+        // to prevent double free
+        if (_outFile && strcmp(_errFile, _outFile) == 0) {
+            _outFile = NULL;
+        }
+        
+        // Free _errFile and set to NULL
+        free(_errFile);
+        _errFile = NULL;
+    }
 
     // Create pipes
     int numPipes = _numberOfSimpleCommands - 1;
@@ -315,7 +337,31 @@ void Command::execute() {
     close(defaultOut);
     close(defaultErr);
 
-    clear();
+    // Modified clear() call
+    for (int i = 0; i < _numberOfSimpleCommands; i++) {
+        for (int j = 0; j < _simpleCommands[i]->_numberOfArguments; j++) {
+            free(_simpleCommands[i]->_arguments[j]);
+        }
+        free(_simpleCommands[i]->_arguments);
+        free(_simpleCommands[i]);
+    }
+
+    // Free remaining resources
+    if (_outFile) {
+        free(_outFile);
+    }
+    if (_inputFile) {
+        free(_inputFile);
+    }
+    // _errFile has already been freed
+
+    _numberOfSimpleCommands = 0;
+    _outFile = NULL;
+    _inputFile = NULL;
+    _errFile = NULL;
+    _background = 0;
+    _append = 0;
+
     prompt();
 }
 

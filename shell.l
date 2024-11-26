@@ -19,12 +19,11 @@
 "<"            { return LESS; }
 "|"            { return PIPE; }
 "&"            { return AMPERSAND; }
+">>&"          { return APPEND_ERR; }
 
-[^ \t\n><|&][^ \t\n><|&]*  {
-                    yylval.string_val = strdup(yytext);
-                    return WORD;
+[^ \t\n><|&]+  {
+    yylval.string_val = strdup(yytext);
+    return WORD;
 }
-
-[><|&]         { return NOTOKEN; }  /* Catch single operators as errors */
 
 %%
