@@ -181,32 +181,6 @@ void Command::setupErrorRedirection(int defaultErr) {
     }
 }
 
-void Command::executeCommand(int i, int defaultIn, int defaultOut, int defaultErr) {
-    pid_t pid = fork();
-    if (pid == -1) {
-        perror("fork");
-        exit(2);
-    }
-
-    if (pid == 0) {  //Child process
-        //First command
-        if (i == 0) {
-            setupInputRedirection(defaultIn);
-        } 
-        
-        //Last command
-        if (i == _numberOfSimpleCommands - 1) {
-            setupOutputRedirection(defaultOut);
-        }
-
-        setupErrorRedirection(defaultErr);
-
-        //Execute command
-        execvp(_simpleCommands[i]->_arguments[0], _simpleCommands[i]->_arguments);
-        perror("execvp");
-        exit(1);
-    }
-}
 
 bool Command::handleBuiltInCommands() {
     if (_numberOfSimpleCommands == 0) return false;
