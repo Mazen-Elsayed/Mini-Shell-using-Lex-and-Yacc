@@ -164,13 +164,20 @@ void Command::setupOutputRedirection(int defaultOut) {
 
 void Command::setupErrorRedirection(int defaultErr) {
     if (_errFile) {
-        int fdErr = open(_errFile, O_WRONLY | O_CREAT | (_append ? O_APPEND : O_TRUNC), 0644);
+        int fdErr;
+        if (_append) {
+            fdErr = open(_errFile, O_WRONLY | O_CREAT | O_APPEND, 0666);
+        } else {
+            fdErr = open(_errFile, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+        }
         if (fdErr < 0) {
             perror("Error redirection failed");
             exit(2);
         }
         dup2(fdErr, 2);
         close(fdErr);
+    } else {
+        dup2(defaultErr, 2);
     }
 }
 
@@ -252,25 +259,6 @@ void Command::execute() {
     int defaultOut = dup(1);
     int defaultErr = dup(2);
 
-    // Handle error redirection first
-    if (_errFile) {
-        FILE *errorFile = fopen(_errFile, "a");
-        if (errorFile) {
-            fprintf(errorFile, "syntax error\n");
-            fclose(errorFile);
-        }
-        
-        // If _errFile and _outFile point to the same file, set _outFile to NULL
-        // to prevent double free
-        if (_outFile && strcmp(_errFile, _outFile) == 0) {
-            _outFile = NULL;
-        }
-        
-        // Free _errFile and set to NULL
-        free(_errFile);
-        _errFile = NULL;
-    }
-
     // Create pipes
     int numPipes = _numberOfSimpleCommands - 1;
     int pipefds[2 * numPipes];
@@ -337,31 +325,7 @@ void Command::execute() {
     close(defaultOut);
     close(defaultErr);
 
-    // Modified clear() call
-    for (int i = 0; i < _numberOfSimpleCommands; i++) {
-        for (int j = 0; j < _simpleCommands[i]->_numberOfArguments; j++) {
-            free(_simpleCommands[i]->_arguments[j]);
-        }
-        free(_simpleCommands[i]->_arguments);
-        free(_simpleCommands[i]);
-    }
-
-    // Free remaining resources
-    if (_outFile) {
-        free(_outFile);
-    }
-    if (_inputFile) {
-        free(_inputFile);
-    }
-    // _errFile has already been freed
-
-    _numberOfSimpleCommands = 0;
-    _outFile = NULL;
-    _inputFile = NULL;
-    _errFile = NULL;
-    _background = 0;
-    _append = 0;
-
+    clear();
     prompt();
 }
 
